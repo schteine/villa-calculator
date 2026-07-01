@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Villa Investment Calculator — Bali</title>
+<style>
+  :root{
+    --bg:#f4f4f2; --card:#ffffff; --ink:#111114; --muted:#8a8a92;
+    --line:#ececeb; --line2:#e2e2e0;
+    --green:#78be3f; --green-d:#5aa02a;
+    --red:#d64545; --red-l:#e88a8a; --orange:#e6952f; --orange-d:#c76a1e;
+    --field:#faf9f7; --shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.05);
+    --r:18px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px;line-height:1.4;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 18px 60px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+  .brand{display:flex;flex-direction:column;gap:2px}
+  .brand h1{font-size:19px;margin:0;font-weight:650;letter-spacing:-.01em}
+  .brand span{font-size:12.5px;color:var(--muted)}
+  .toggles{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .seg{display:inline-flex;background:#ededea;border-radius:999px;padding:3px}
+  .seg button{border:0;background:transparent;padding:7px 15px;border-radius:999px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
+  .seg button.on{background:#111114;color:#fff}
+  .rate-inline{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+  .rate-inline input{width:78px;border:1px solid var(--line2);border-radius:8px;padding:5px 7px;font-size:12.5px;background:#fff}
+
+  /* plans header */
+  .plans-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .plans-hd h2{font-size:16px;margin:0;font-weight:650}
+  .editbtn{border:1px solid var(--line2);background:#fff;border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;color:#55555c;cursor:pointer}
+  .editbtn.on{background:#111114;color:#fff;border-color:#111114}
+
+  /* payment plan cards */
+  .plans{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:18px}
+  .plan{background:var(--card);border:1.5px solid var(--line);border-radius:var(--r);padding:18px;cursor:pointer;position:relative;transition:border-color .15s,box-shadow .15s}
+  .plan:hover{border-color:#d8d8d5}
+  .plan.sel{border-color:#111114;box-shadow:var(--shadow)}
+  .plan .phead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .plan .ptitle{font-weight:650;font-size:15px}
+  .plan .pill{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;background:#111114;color:#fff}
+  .plan .disc{font-size:12px;font-weight:700;color:var(--green-d);background:#eaf5e0;padding:3px 8px;border-radius:999px;margin-right:6px}
+  .plan .price{font-size:24px;font-weight:700;letter-spacing:-.02em}
+  .plan .price .old{font-size:14px;color:#b9b9bd;text-decoration:line-through;font-weight:500;margin-left:7px}
+  .bar{height:7px;border-radius:999px;background:#eee;display:flex;overflow:hidden;margin:14px 0 12px}
+  .bar i{display:block;height:100%}
+  .legs{display:flex;flex-direction:column;gap:7px}
+  .leg{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#55555c}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .leg b{color:var(--ink);font-weight:650;min-width:38px}
+
+  /* plan editor */
+  .peditor{margin-top:14px;border-top:1px dashed var(--line2);padding-top:12px}
+  .peditor .erow{display:grid;grid-template-columns:58px 1fr 46px 26px;gap:7px;align-items:center;margin-bottom:7px}
+  .peditor input{border:1px solid var(--line2);background:var(--field);border-radius:8px;padding:6px 7px;font-size:12.5px;width:100%;outline:none}
+  .peditor input:focus{border-color:#bcbcbb}
+  .peditor .hint{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;font-weight:600}
+  .peditor .ehead{display:grid;grid-template-columns:58px 1fr 46px 26px;gap:7px;margin-bottom:5px}
+  .xbtn{border:0;background:#f0eeeb;border-radius:7px;color:#999;font-size:15px;cursor:pointer;height:30px;line-height:1}
+  .addrow{border:1px dashed var(--line2);background:#fff;border-radius:9px;padding:7px;font-size:12.5px;font-weight:600;color:#55555c;cursor:pointer;width:100%;margin-top:2px}
+  .sumwarn{font-size:11.5px;margin-top:8px;font-weight:600}
+  .sumwarn.ok{color:var(--green-d)} .sumwarn.bad{color:var(--red)}
+
+  .grid{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;align-items:start}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+  .card .ch{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 4px}
+  .card .ch h2{font-size:16px;margin:0;font-weight:650}
+
+  /* inputs panel */
+  .inputs{margin-bottom:16px}
+  .inbody{padding:6px 20px 20px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px 18px}
+  .fld{display:flex;flex-direction:column;gap:5px}
+  .fld label{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+  .fld .inw{display:flex;align-items:center;background:var(--field);border:1px solid var(--line2);border-radius:10px;padding:0 10px}
+  .fld .inw:focus-within{border-color:#bcbcbb}
+  .fld .inw span{font-size:12.5px;color:var(--muted)}
+  .fld input{border:0;background:transparent;padding:9px 6px;font-size:14px;width:100%;font-variant-numeric:tabular-nums;color:var(--ink);outline:none;min-width:0}
+  .sec-lbl{grid-column:1/-1;font-size:11px;font-weight:700;letter-spacing:.06em;color:#b3b3b6;text-transform:uppercase;margin-top:4px;border-top:1px solid var(--line);padding-top:12px}
+  .sec-lbl:first-child{border-top:0;padding-top:0;margin-top:0}
+
+  /* KPI strip */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px;box-shadow:var(--shadow)}
+  .kpi .k{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+  .kpi .v{font-size:24px;font-weight:700;letter-spacing:-.02em;margin-top:6px;font-variant-numeric:tabular-nums}
+  .kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
+  .kpi.hl{background:#111114;color:#fff}
+  .kpi.hl .k,.kpi.hl .s{color:#a9a9ad}
+  .kpi.hl .v{color:var(--green)}
+
+  /* summary table */
+  table{width:100%;border-collapse:collapse}
+  .sumtbl{padding:4px 0 6px}
+  thead th{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:right;padding:12px 20px 10px;background:#faf9f7}
+  thead th:first-child{text-align:left}
+  tbody td{font-size:13.5px;text-align:right;padding:11px 20px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+  tbody td:first-child{text-align:left;color:#3a3a40}
+  tr.grp td{background:#faf9f7;color:#9a9aa0;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:8px 20px;border-top:0}
+  tr.strong td{font-weight:700;color:var(--ink)}
+  td.neg{color:var(--red)}
+  tr.net td{background:#111114;color:#fff;font-weight:700}
+  tr.net td.pos{color:var(--green)}
+  .tabs{display:inline-flex;background:#ededea;border-radius:999px;padding:3px}
+  .tabs button{border:0;background:transparent;padding:6px 13px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer}
+  .tabs button.on{background:#fff;color:#111114;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+  /* donut */
+  .fin{padding:8px 20px 22px}
+  .donutwrap{display:flex;justify-content:center;margin:10px 0 18px}
+  .donut{position:relative;width:230px;height:230px}
+  .donut .ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .donut .ctr small{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  .donut .ctr b{font-size:23px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .fleg{display:flex;flex-direction:column;gap:10px}
+  .frow{display:flex;align-items:center;gap:9px;font-size:13px}
+  .frow .fname{color:#4a4a50;flex:1}
+  .frow .fval{font-weight:650;font-variant-numeric:tabular-nums}
+
+  /* cashflow chart */
+  .cf{margin-top:16px}
+  .cflegend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);padding:2px 20px 4px}
+  .cflegend span{display:inline-flex;align-items:center;gap:6px}
+  .cfbody{padding:6px 16px 18px}
+  .cfchart{width:100%;height:260px}
+  .amort{margin-top:16px}
+  .amort .abody{padding:4px 0 8px;overflow:auto}
+  .note{font-size:11.5px;color:var(--muted);padding:0 20px 16px;line-height:1.5}
+  .foot{margin-top:22px;font-size:11.5px;color:#a7a7ab;text-align:center;line-height:1.6}
+
+  @media(max-width:920px){
+    .grid{grid-template-columns:1fr}
+    .plans{grid-template-columns:1fr}
+    .inbody{grid-template-columns:repeat(2,1fr)}
+    .kpis{grid-template-columns:repeat(2,1fr)}
+  }
+  @media(max-width:520px){
+    .inbody{grid-template-columns:1fr}
+    .wrap{padding:16px 12px 44px}
+    thead th,tbody td{padding-left:14px;padding-right:14px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <h1>Villa Investment Calculator</h1>
+      <span>Live returns on your assumptions — Bali leasehold</span>
+    </div>
+    <div class="toggles">
+      <div class="rate-inline">1 USD =
+        <input id="fx" type="number" value="16300" step="50"> IDR
+      </div>
+      <div class="seg" id="curSeg">
+        <button data-cur="USD" class="on">USD</button>
+        <button data-cur="IDR">IDR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment plans -->
+  <div class="plans-hd">
+    <h2>Payment plans</h2>
+    <button class="editbtn" id="editPlans">Edit plans</button>
+  </div>
+  <div class="plans" id="plans"></div>
+
+  <!-- Inputs -->
+  <div class="card inputs">
+    <div class="ch"><h2>Assumptions</h2>
+      <button id="reset" class="tabs" style="cursor:pointer"><span style="padding:0 6px">Reset defaults</span></button>
+    </div>
+    <div class="inbody" id="inputs"></div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="kpis" id="kpis"></div>
+
+  <div class="grid">
+    <!-- Investment summary -->
+    <div class="card">
+      <div class="ch">
+        <h2>Investment summary</h2>
+        <div class="tabs" id="sumTabs">
+          <button data-h="3">3 years</button>
+          <button data-h="5" class="on">5 years</button>
+          <button data-h="7">7 years</button>
+          <button data-h="10">10 years</button>
+        </div>
+      </div>
+      <div class="sumtbl"><table id="sumTable"></table></div>
+      <div class="note" id="planNote"></div>
+    </div>
+
+    <!-- Financial structure donut -->
+    <div class="card fin">
+      <div class="ch" style="padding:18px 0 4px"><h2>Financial structure</h2></div>
+      <div class="donutwrap"><div class="donut" id="donut"></div></div>
+      <div class="fleg" id="fleg"></div>
+    </div>
+  </div>
+
+  <!-- Cashflow chart -->
+  <div class="card cf">
+    <div class="ch"><h2>Cash flow over hold period</h2></div>
+    <div class="cflegend">
+      <span><i class="dot" style="background:var(--green)"></i>Cumulative net cash</span>
+      <span><i class="dot" style="background:var(--orange)"></i>Annual net profit</span>
+      <span><i class="dot" style="background:#c9c9c9"></i>Break-even</span>
+    </div>
+    <div class="cfbody"><svg class="cfchart" id="cfchart" preserveAspectRatio="none"></svg></div>
+  </div>
+
+  <!-- Leasehold amortization -->
+  <div class="card amort">
+    <div class="ch"><h2>Leasehold amortization &amp; resale value</h2></div>
+    <div class="abody"><table id="amortTable"></table></div>
+    <div class="note" id="amortNote"></div>
+  </div>
+
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- defaults ---------- */
+const DEFAULTS = {
+  price: 250000,
+  furnishing: 15000,
+  leaseTotal: 30,
+  leaseRemain: 30,
+  adr: 150,
+  occ: 70,
+  adrGrowth: 3,
+  appr: 4,
+  otaComm: 14.4,
+  dirComm: 2,
+  genCosts: 12.6,
+  mgmtComm: 20,
+  taxRate: 10,
+  hold: 5,
+  discount: 8,
+  leaseFloor: 40,     // % of appreciated value retained at lease end (softens decay)
+  saleAgent: 5,       // agent commission on resale %
+  saleTax: 10         // investor sale tax %
+};
+let S = {...DEFAULTS};
+let CUR = "USD";
+let SUMH = "5";
+let PLAN = "inst";
+let EDIT = false;
+
+/* editable plans */
+let PLANS = {
+  full: { name:"Full prepayment", type:"full", discount:5,
+          rows:[{pct:100,label:"On handover",year:0}] },
+  inst: { name:"Installment plan", type:"inst", discount:0,
+          rows:[
+            {pct:50,label:"Down payment (on signing)",year:0},
+            {pct:50,label:"During construction",year:1}
+          ] }
+};
+const ROWCOLORS=["var(--orange)","var(--orange-d)","var(--red-l)","var(--red)","#e0b04a","#9a7bd6"];
+
+/* ---------- helpers ---------- */
+const $=id=>document.getElementById(id);
+function fxRate(){return Number(S.fx||16300);}
+function money(v){
+  const val = CUR==="USD" ? v : v*fxRate();
+  const sym = CUR==="USD" ? "$" : "Rp ";
+  return (val<0?"−":"")+sym+Math.round(Math.abs(val)).toLocaleString("en-US");
+}
+function moneyShort(v){
+  const val = CUR==="USD" ? v : v*fxRate();
+  const sym = CUR==="USD" ? "$" : "Rp";
+  const a=Math.abs(val); let s;
+  if(a>=1e9) s=(val/1e9).toFixed(1).replace(/\.0$/,"")+"b";
+  else if(a>=1e6) s=(val/1e6).toFixed(1).replace(/\.0$/,"")+"m";
+  else if(a>=1e3) s=(val/1e3).toFixed(0)+"k";
+  else s=Math.round(val).toString();
+  return (val<0?"−":"")+sym+s.replace("-","");
+}
+
+/* ---------- financial engine ---------- */
+function planPrice(p){ return S.price*(1-(p.discount||0)/100); }
+function planSum(p){ return p.rows.reduce((a,r)=>a+(Number(r.pct)||0),0); }
+
+function calc(){
+  const p = PLANS[PLAN];
+  const price = planPrice(p);
+  const totalCashInvested = price*planSum(p)/100 + S.furnishing;
+
+  const holdY = Math.max(1,Math.round(S.hold));
+  const projN = Math.max(10, holdY);       // project operating rows out to 10y for summary tabs
+  const rows = [];
+  for(let y=1;y<=projN;y++){
+    const g=Math.pow(1+S.adrGrowth/100,y-1);
+    const revenue=S.adr*365*(S.occ/100)*g;
+    const ota=revenue*S.otaComm/100;
+    const dir=revenue*S.dirComm/100;
+    const profAfterComm=revenue-ota-dir;
+    const gen=revenue*S.genCosts/100;
+    const mgmt=profAfterComm*S.mgmtComm/100;
+    const pbt=profAfterComm-gen-mgmt;
+    const tax=pbt*S.taxRate/100;
+    const net=pbt-tax;
+    rows.push({year:y,revenue,ota,dir,profAfterComm,gen,mgmt,pbt,tax,net});
+  }
+  const firstYear=rows[0];
+
+  // cashflow for IRR over hold period, using plan payment schedule timing
+  const cashflow=[];
+  let cum=0, payback=null;
+  for(let y=0;y<=holdY;y++){
+    let cf = y===0 ? -S.furnishing : rows[y-1].net;
+    // scheduled purchase payments in year y
+    p.rows.forEach(r=>{ if(Math.round(Number(r.year))===y) cf -= price*(Number(r.pct)||0)/100; });
+    let resaleNet=0;
+    if(y===holdY){ resaleNet=resaleNet_(holdY); cf+=resaleNet; }
+    cum+=cf;
+    cashflow.push({year:y,net:cf,cum,op:(y===0?0:rows[y-1].net),resale:resaleNet});
+    if(cum>=0 && payback===null) payback=y;
+  }
+
+  const irr=computeIRR(cashflow.map(c=>c.net));
+  const npv=cashflow.reduce((a,c)=>a+c.net/Math.pow(1+S.discount/100,c.year),0);
+  const coc=firstYear.net/totalCashInvested*100;
+  const totalOp=rows.slice(0,holdY).reduce((a,r)=>a+r.net,0);
+  const resaleGross=resaleGross_(holdY);
+  const resaleNet=resaleNet_(holdY);
+  const saleCosts=resaleGross-resaleNet;
+  const capGain=resaleNet-price;
+  const totalReturn=totalOp+capGain;
+  const roi=totalReturn/totalCashInvested*100;
+
+  return {price,totalCashInvested,firstYear,rows,cashflow,irr,npv,coc,payback,
+          totalOp,resaleGross,resaleNet,saleCosts,capGain,totalReturn,roi,years:holdY};
+}
+
+function decayFactor(atYear){
+  const remain=Math.max(0,S.leaseRemain-atYear);
+  const leaseFactor=S.leaseRemain>0?remain/S.leaseRemain:0;
+  const floor=S.leaseFloor/100;
+  return floor+(1-floor)*leaseFactor;   // softened: never below floor while lease runs
+}
+function resaleGross_(atYear){
+  const market=Math.pow(1+S.appr/100,atYear);
+  return S.price*market*decayFactor(atYear);
+}
+function resaleNet_(atYear){
+  const gross=resaleGross_(atYear);
+  return gross*(1-(S.saleAgent+S.saleTax)/100);
+}
+
+function computeIRR(cf){
+  const npvAt=r=>cf.reduce((a,v,i)=>a+v/Math.pow(1+r,i),0);
+  let lo=-0.95,hi=5,flo=npvAt(lo),fhi=npvAt(hi);
+  if(flo*fhi>0) return null;
+  for(let i=0;i<200;i++){
+    const mid=(lo+hi)/2,fm=npvAt(mid);
+    if(Math.abs(fm)<1e-6) return mid;
+    if(flo*fm<0){hi=mid;fhi=fm;} else {lo=mid;flo=fm;}
+  }
+  return (lo+hi)/2;
+}
+
+/* ---------- plans render ---------- */
+function planColor(p,i){ return p.type==="full"?"var(--green)":ROWCOLORS[i%ROWCOLORS.length]; }
+
+function renderPlans(){
+  $("plans").innerHTML=Object.entries(PLANS).map(([k,p])=>{
+    const pr=planPrice(p);
+    const sel=k===PLAN?"sel":"";
+    const disc=p.discount?`<span class="disc">−${p.discount}%</span>`:"";
+    const oldp=p.discount?`<span class="old">${money(S.price)}</span>`:"";
+    const bars=p.rows.map((r,i)=>`<i style="width:${Number(r.pct)||0}%;background:${planColor(p,i)}"></i>`).join("");
+    const legs=p.rows.map((r,i)=>`<div class="leg"><span class="dot" style="background:${planColor(p,i)}"></span><b>${Number(r.pct)||0}%</b>${escapeHtml(r.label)}</div>`).join("");
+    const editor=EDIT?planEditor(k,p):"";
+    return `<div class="plan ${sel}" data-plan="${k}">
+      <div class="phead"><div class="ptitle">${escapeHtml(p.name)}</div>${sel?'<span class="pill">Selected</span>':''}</div>
+      <div class="price">${disc}${money(pr)}${oldp}</div>
+      <div class="bar">${bars}</div>
+      <div class="legs">${legs}</div>
+      ${editor}
+    </div>`;
+  }).join("");
+
+  // select card
+  $("plans").querySelectorAll(".plan").forEach(el=>{
+    el.addEventListener("click",e=>{
+      if(e.target.closest(".peditor")) return; // don't switch while editing
+      PLAN=el.dataset.plan; render();
+    });
+  });
+  if(EDIT) wirePlanEditors();
+}
+
+function planEditor(k,p){
+  const sum=planSum(p);
+  const okcls=sum===100?"ok":"bad";
+  const rowsHtml=p.rows.map((r,i)=>`
+    <div class="erow" data-i="${i}">
+      <input type="number" data-f="pct" value="${r.pct}" step="any">
+      <input type="text" data-f="label" value="${escapeAttr(r.label)}">
+      <input type="number" data-f="year" value="${r.year}" step="1">
+      <button class="xbtn" data-x="${i}" title="Remove">×</button>
+    </div>`).join("");
+  const discRow = `<div class="erow" style="grid-template-columns:1fr 58px">
+      <div class="hint" style="align-self:center">Discount %</div>
+      <input type="number" data-f="discount" value="${p.discount}" step="any">
+    </div>`;
+  return `<div class="peditor" data-editor="${k}">
+    ${discRow}
+    <div class="ehead"><div class="hint">%</div><div class="hint">When (client text)</div><div class="hint">Year</div><div></div></div>
+    ${rowsHtml}
+    <button class="addrow" data-add="${k}">+ Add payment</button>
+    <div class="sumwarn ${okcls}">Total: ${sum}% ${sum===100?"✓":"— should be 100%"}</div>
+  </div>`;
+}
+
+function wirePlanEditors(){
+  $("plans").querySelectorAll(".peditor").forEach(ed=>{
+    const k=ed.dataset.editor, p=PLANS[k];
+    ed.querySelectorAll("input[data-f]").forEach(inp=>{
+      inp.addEventListener("input",()=>{
+        const f=inp.dataset.f;
+        if(f==="discount"){ p.discount=parseFloat(inp.value)||0; }
+        else{
+          const i=+inp.closest(".erow").dataset.i;
+          p.rows[i][f] = f==="label" ? inp.value : (parseFloat(inp.value)||0);
+        }
+        // light refresh (keep focus): update everything except re-injecting this editor's inputs
+        softRefresh();
+      });
+    });
+    ed.querySelectorAll("[data-x]").forEach(b=>b.addEventListener("click",()=>{
+      p.rows.splice(+b.dataset.x,1); render();
+    }));
+    const add=ed.querySelector("[data-add]");
+    if(add) add.addEventListener("click",()=>{ p.rows.push({pct:0,label:"Payment",year:1}); render(); });
+  });
+}
+
+function escapeHtml(s){return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+function escapeAttr(s){return String(s).replace(/"/g,"&quot;");}
+
+/* ---------- inputs ---------- */
+const INPUT_DEFS=[
+  ["_s1","Purchase"],
+  ["price","Property price","$",""],
+  ["furnishing","Furnishing / CapEx","$",""],
+  ["leaseTotal","Leasehold term","","yr"],
+  ["leaseRemain","Remaining lease","","yr"],
+  ["_s2","Revenue"],
+  ["adr","Avg nightly rate (ADR)","$",""],
+  ["occ","Occupancy","","%"],
+  ["adrGrowth","ADR growth / yr","","%"],
+  ["appr","Asset appreciation / yr","","%"],
+  ["_s3","Operating costs"],
+  ["otaComm","OTA commission","","%"],
+  ["dirComm","Direct booking comm.","","%"],
+  ["genCosts","General costs","","%"],
+  ["mgmtComm","Management commission","","%"],
+  ["taxRate","Rental income tax","","%"],
+  ["_s4","Exit"],
+  ["hold","Holding period","","yr"],
+  ["discount","Discount rate (NPV)","","%"],
+  ["leaseFloor","Value floor at lease end","","%"],
+  ["saleAgent","Sale agent commission","","%"],
+  ["saleTax","Sale tax (investor)","","%"]
+];
+function renderInputs(){
+  $("inputs").innerHTML=INPUT_DEFS.map(d=>{
+    if(d[0].startsWith("_s")) return `<div class="sec-lbl">${d[1]}</div>`;
+    const [key,label,pre,suf]=d;
+    return `<div class="fld"><label>${label}</label>
+      <div class="inw">${pre?`<span>${pre}</span>`:""}
+      <input type="number" data-k="${key}" value="${S[key]}" step="any">
+      ${suf?`<span>${suf}</span>`:""}</div></div>`;
+  }).join("");
+  $("inputs").querySelectorAll("input").forEach(inp=>{
+    inp.addEventListener("input",()=>{S[inp.dataset.k]=parseFloat(inp.value)||0;softRefresh();});
+  });
+}
+
+/* ---------- summary ---------- */
+function renderSummary(R){
+  const fy=R.firstYear;
+  const nH=Math.min(parseInt(SUMH,10),R.rows.length);
+  const sum=k=>R.rows.slice(0,nH).reduce((a,r)=>a+r[k],0);
+  const hLabel=SUMH+" years";
+  const head=`<thead><tr><th>Item</th><th>Per month</th><th>Per year</th><th>${hLabel}</th></tr></thead>`;
+  const pos=(label,key,cls)=>{
+    const py=fy[key];
+    return `<tr class="${cls||''}"><td>${label}</td>
+      <td>${money(py/12)}</td><td>${money(py)}</td><td>${money(sum(key))}</td></tr>`;
+  };
+  const neg=(label,key)=>{
+    const py=fy[key];
+    return `<tr><td>${label}</td>
+      <td class="neg">${money(-py)}</td><td class="neg">${money(-py)}</td><td class="neg">${money(-sum(key))}</td></tr>`;
+  };
+  const net=`<tr class="net"><td>Net profit</td>
+      <td class="pos">${money(fy.net/12)}</td><td class="pos">${money(fy.net)}</td><td class="pos">${money(sum("net"))}</td></tr>`;
+  $("sumTable").innerHTML=head+`<tbody>
+    ${pos("Income","revenue")}
+    <tr class="grp"><td colspan="4">Revenue expenses</td></tr>
+    ${neg("OTA commission","ota")}
+    ${neg("Direct booking commission","dir")}
+    ${pos("Profit after commissions","profAfterComm","strong")}
+    <tr class="grp"><td colspan="4">Profit expenses</td></tr>
+    ${neg("General costs","gen")}
+    ${neg("Management commission","mgmt")}
+    ${pos("Profit before tax","pbt","strong")}
+    <tr class="grp"><td colspan="4">Taxes</td></tr>
+    ${neg("Investor income tax","tax")}
+    ${net}
+  </tbody>`;
+}
+
+/* ---------- KPIs ---------- */
+function renderKPIs(R){
+  const irr=R.irr===null?"—":(R.irr*100).toFixed(1)+"%";
+  $("kpis").innerHTML=`
+    <div class="kpi"><div class="k">IRR</div><div class="v">${irr}</div><div class="s">over ${R.years} yr hold</div></div>
+    <div class="kpi"><div class="k">Cash-on-cash</div><div class="v">${R.coc.toFixed(1)}%</div><div class="s">year 1 yield</div></div>
+    <div class="kpi"><div class="k">Payback</div><div class="v">${R.payback===null?"—":R.payback+" yr"}</div><div class="s">to recover capital</div></div>
+    <div class="kpi hl"><div class="k">Total ROI</div><div class="v">${R.roi.toFixed(0)}%</div><div class="s">${money(R.totalReturn)} over hold</div></div>`;
+}
+
+/* ---------- donut ---------- */
+function renderDonut(R){
+  const fy=R.firstYear;
+  const segs=[
+    ["Investor profit",fy.net,"var(--green)"],
+    ["OTA commission",fy.ota,"var(--red-l)"],
+    ["Direct booking commission",fy.dir,"#e0b04a"],
+    ["General costs",fy.gen,"var(--orange)"],
+    ["Management commission",fy.mgmt,"var(--red)"],
+    ["Income tax",fy.tax,"#a83232"]
+  ];
+  const total=segs.reduce((a,s)=>a+s[1],0);
+  const cx=115,cy=115,rad=88,sw=26,circ=2*Math.PI*rad;
+  let off=0;
+  const arcs=segs.map(s=>{
+    const len=(total>0?s[1]/total:0)*circ;
+    const el=`<circle cx="${cx}" cy="${cy}" r="${rad}" fill="none" stroke="${s[2]}" stroke-width="${sw}" stroke-dasharray="${len} ${circ-len}" stroke-dashoffset="${-off}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    off+=len; return el;
+  }).join("");
+  $("donut").innerHTML=`<svg viewBox="0 0 230 230" width="230" height="230">${arcs}</svg>
+    <div class="ctr"><small>Per year</small><b>${money(fy.revenue)}</b></div>`;
+  $("fleg").innerHTML=segs.map(s=>`<div class="frow"><span class="dot" style="background:${s[2]}"></span>
+    <span class="fname">${s[0]}</span><span class="fval">${money(s[1])}</span></div>`).join("");
+}
+
+/* ---------- cashflow chart with Y axis ---------- */
+function renderCashflow(R){
+  const svg=$("cfchart");
+  const W=760,H=260,padL=64,padR=14,padT=16,padB=30;
+  const cf=R.cashflow;
+  const cum=cf.map(c=>c.cum), ann=cf.map(c=>c.op);
+  let minV=Math.min(0,...cum,...ann), maxV=Math.max(0,...cum,...ann);
+  // nice rounding
+  const range=maxV-minV||1;
+  const step=niceStep(range/4);
+  minV=Math.floor(minV/step)*step; maxV=Math.ceil(maxV/step)*step;
+  const x=i=>padL+(W-padL-padR)*(i/(cf.length-1||1));
+  const y=v=>padT+(H-padT-padB)*(1-(v-minV)/((maxV-minV)||1));
+  const zeroY=y(0);
+
+  // gridlines + Y labels
+  let grid="",ylab="";
+  for(let v=minV; v<=maxV+1e-6; v+=step){
+    const yy=y(v);
+    grid+=`<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="${Math.abs(v)<1e-6?'#cfcfce':'#f0efed'}" stroke-width="1"/>`;
+    ylab+=`<text x="${padL-8}" y="${(yy+3.5).toFixed(1)}" font-size="10.5" fill="#9a9a9f" text-anchor="end">${moneyShort(v)}</text>`;
+  }
+  // bars = annual net profit
+  const bw=Math.min(22,(W-padL-padR)/cf.length*0.5);
+  const bars=cf.map((c,i)=>{
+    if(i===0) return "";
+    const top=c.op>=0?y(c.op):zeroY;
+    const h=Math.abs(y(c.op)-zeroY);
+    return `<rect x="${(x(i)-bw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,h).toFixed(1)}" rx="3" fill="var(--orange)" opacity=".8"/>`;
+  }).join("");
+  // cumulative line
+  const path=cf.map((c,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(c.cum).toFixed(1)}`).join(" ");
+  const dots=cf.map((c,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(c.cum).toFixed(1)}" r="3.4" fill="var(--green)"/>`).join("");
+  const xlab=cf.map((c,i)=>`<text x="${x(i).toFixed(1)}" y="${H-9}" font-size="10.5" fill="#9a9a9f" text-anchor="middle">Y${c.year}</text>`).join("");
+  const pb=R.payback;
+  const pbLine=pb!==null?`<line x1="${x(pb).toFixed(1)}" y1="${padT}" x2="${x(pb).toFixed(1)}" y2="${H-padB}" stroke="#c9c9c9" stroke-width="1" stroke-dasharray="3 3"/>
+     <text x="${x(pb).toFixed(1)}" y="${padT-4}" font-size="10" fill="#a7a7ab" text-anchor="middle">break-even</text>`:"";
+
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  svg.innerHTML=`${grid}${ylab}${pbLine}${bars}
+    <path d="${path}" fill="none" stroke="var(--green)" stroke-width="2.4"/>
+    ${dots}${xlab}
+    <text transform="rotate(-90 14 ${(H/2).toFixed(0)})" x="14" y="${(H/2).toFixed(0)}" font-size="10.5" fill="#b6b6ba" text-anchor="middle">Cash, ${CUR}</text>`;
+}
+function niceStep(x){
+  const p=Math.pow(10,Math.floor(Math.log10(x||1)));
+  const n=x/p;
+  const m = n<1.5?1 : n<3?2 : n<7?5 : 10;
+  return m*p;
+}
+
+/* ---------- amortization ---------- */
+function renderAmort(R){
+  const head=`<thead><tr><th>Year</th><th>Remaining lease</th><th>Gross resale value</th><th>Net after fees + tax</th></tr></thead>`;
+  let body="<tbody>";
+  for(let yv=0;yv<=R.years;yv++){
+    const remain=Math.max(0,S.leaseRemain-yv);
+    const gross=resaleGross_(yv), net=resaleNet_(yv);
+    body+=`<tr${yv===R.years?' class="strong"':''}><td>Year ${yv}</td>
+      <td>${remain} yr</td><td>${money(gross)}</td><td>${money(net)}</td></tr>`;
+  }
+  body+="</tbody>";
+  $("amortTable").innerHTML=head+body;
+  $("amortNote").innerHTML=`Resale = price × (1+appreciation)<sup>yrs</sup> × decay, where decay never drops below the
+    <b>${S.leaseFloor}%</b> floor while the lease runs. Exit costs: agent <b>${S.saleAgent}%</b> + investor sale tax <b>${S.saleTax}%</b>
+    (on gross sale price). At Year ${R.years}: gross ${money(R.resaleGross)}, exit costs −${money(R.saleCosts)},
+    net <b>${money(R.resaleNet)}</b> → capital ${R.capGain>=0?"gain":"loss"} <b>${money(R.capGain)}</b> vs. purchase.`;
+}
+
+function renderPlanNote(R){
+  const p=PLANS[PLAN];
+  const sum=planSum(p);
+  const warn=sum!==100?` <b style="color:var(--red)">Payments total ${sum}% (not 100%)</b>.`:"";
+  $("planNote").innerHTML=`Plan: <b>${escapeHtml(p.name)}</b>${p.discount?` (${p.discount}% discount → ${money(R.price)})`:""}.
+    Cash invested <b>${money(R.totalCashInvested)}</b>. NPV @ ${S.discount}% = <b>${money(R.npv)}</b>.${warn}
+    Estimates for discussion, not a guarantee of returns.`;
+}
+
+/* ---------- orchestration ---------- */
+function fullRender(){
+  S.fx=Number($("fx").value)||16300;
+  const R=calc();
+  renderPlans();
+  renderInputs();
+  paint(R);
+}
+function softRefresh(){          // update outputs without rebuilding inputs (keeps focus)
+  S.fx=Number($("fx").value)||16300;
+  const R=calc();
+  // refresh plan visuals (bars/legend/price) but not the editor inputs
+  refreshPlanVisuals();
+  paint(R);
+}
+function paint(R){
+  renderKPIs(R);
+  renderSummary(R);
+  renderDonut(R);
+  renderCashflow(R);
+  renderAmort(R);
+  renderPlanNote(R);
+  $("foot").innerHTML=`Villa Investment Calculator · assumptions editable · ${CUR} @ 1 USD = ${Number(S.fx).toLocaleString()} IDR`;
+}
+function refreshPlanVisuals(){
+  Object.entries(PLANS).forEach(([k,p])=>{
+    const card=$("plans").querySelector(`.plan[data-plan="${k}"]`); if(!card) return;
+    const pr=planPrice(p);
+    card.querySelector(".price").innerHTML=`${p.discount?`<span class="disc">−${p.discount}%</span>`:""}${money(pr)}${p.discount?`<span class="old">${money(S.price)}</span>`:""}`;
+    card.querySelector(".bar").innerHTML=p.rows.map((r,i)=>`<i style="width:${Number(r.pct)||0}%;background:${planColor(p,i)}"></i>`).join("");
+    card.querySelector(".legs").innerHTML=p.rows.map((r,i)=>`<div class="leg"><span class="dot" style="background:${planColor(p,i)}"></span><b>${Number(r.pct)||0}%</b>${escapeHtml(r.label)}</div>`).join("");
+    const warn=card.querySelector(".sumwarn");
+    if(warn){const sum=planSum(p);warn.className="sumwarn "+(sum===100?"ok":"bad");warn.textContent=`Total: ${sum}% ${sum===100?"✓":"— should be 100%"}`;}
+  });
+}
+const render=fullRender;
+
+/* events */
+$("curSeg").querySelectorAll("button").forEach(b=>{
+  b.onclick=()=>{CUR=b.dataset.cur;$("curSeg").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));render();};
+});
+$("sumTabs").querySelectorAll("button").forEach(b=>{
+  b.onclick=()=>{SUMH=b.dataset.h;$("sumTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderSummary(calc());};
+});
+$("editPlans").onclick=()=>{EDIT=!EDIT;$("editPlans").classList.toggle("on",EDIT);$("editPlans").textContent=EDIT?"Done editing":"Edit plans";renderPlans();};
+$("fx").oninput=()=>softRefresh();
+$("reset").onclick=()=>{S={...DEFAULTS};render();};
+
+render();
+</script>
+</body>
+</html>
