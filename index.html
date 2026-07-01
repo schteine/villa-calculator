@@ -119,6 +119,10 @@
   .frow{display:flex;align-items:center;gap:9px;font-size:13px}
   .frow .fname{color:#4a4a50;flex:1}
   .frow .fval{font-weight:650;font-variant-numeric:tabular-nums}
+  .frow.hero{background:#eef7e6;border:1px solid #d7ecc4;border-radius:10px;padding:9px 11px;margin:-2px 0}
+  .frow.hero .dot{width:11px;height:11px}
+  .frow.hero .fname{color:var(--green-d);font-weight:700;font-size:13.5px}
+  .frow.hero .fval{color:var(--green-d);font-weight:800;font-size:15.5px}
 
   /* cashflow chart */
   .cf{margin-top:16px}
@@ -207,10 +211,17 @@
 
   <!-- Cashflow chart -->
   <div class="card cf">
-    <div class="ch"><h2>Cash flow over hold period</h2></div>
+    <div class="ch"><h2>Cash flow over hold period</h2>
+      <div class="tabs" id="cfTabs">
+        <button data-h="5">5 yr</button>
+        <button data-h="10" class="on">10 yr</button>
+        <button data-h="15">15 yr</button>
+        <button data-h="20">20 yr</button>
+      </div>
+    </div>
     <div class="cflegend">
       <span><i class="dot" style="background:var(--green)"></i>Cumulative net cash</span>
-      <span><i class="dot" style="background:var(--orange)"></i>Annual net profit</span>
+      <span><i class="dot" style="background:var(--orange)"></i>Annual operating profit</span>
       <span><i class="dot" style="background:#c9c9c9"></i>Break-even</span>
     </div>
     <div class="cfbody"><svg class="cfchart" id="cfchart" preserveAspectRatio="none"></svg></div>
@@ -244,7 +255,7 @@ const DEFAULTS = {
   genCosts: 12.6,
   mgmtComm: 20,
   taxRate: 10,
-  hold: 5,
+  hold: 10,
   discount: 8,
   leaseFloor: 40,     // % of appreciated value retained at lease end (softens decay)
   saleAgent: 5,       // agent commission on resale %
@@ -259,11 +270,11 @@ let EDIT = false;
 /* editable plans */
 let PLANS = {
   full: { name:"Full prepayment", type:"full", discount:5,
-          rows:[{pct:100,label:"On handover",year:0}] },
+          rows:[{pct:100,label:"On signing",month:0}] },
   inst: { name:"Installment plan", type:"inst", discount:0,
           rows:[
-            {pct:50,label:"Down payment (on signing)",year:0},
-            {pct:50,label:"During construction",year:1}
+            {pct:50,label:"Down payment (on signing)",month:0},
+            {pct:50,label:"On handover",month:12}
           ] }
 };
 const ROWCOLORS=["var(--orange)","var(--orange-d)","var(--red-l)","var(--red)","#e0b04a","#9a7bd6"];
@@ -314,13 +325,12 @@ function calc(){
   }
   const firstYear=rows[0];
 
-  // cashflow for IRR over hold period, using plan payment schedule timing
+  // annual cashflow buckets (chart & payback); purchase payments bucketed month→year
   const cashflow=[];
   let cum=0, payback=null;
   for(let y=0;y<=holdY;y++){
     let cf = y===0 ? -S.furnishing : rows[y-1].net;
-    // scheduled purchase payments in year y
-    p.rows.forEach(r=>{ if(Math.round(Number(r.year))===y) cf -= price*(Number(r.pct)||0)/100; });
+    p.rows.forEach(r=>{ if(Math.round((Number(r.month)||0)/12)===y) cf -= price*(Number(r.pct)||0)/100; });
     let resaleNet=0;
     if(y===holdY){ resaleNet=resaleNet_(holdY); cf+=resaleNet; }
     cum+=cf;
@@ -328,8 +338,13 @@ function calc(){
     if(cum>=0 && payback===null) payback=y;
   }
 
-  const irr=computeIRR(cashflow.map(c=>c.net));
-  const npv=cashflow.reduce((a,c)=>a+c.net/Math.pow(1+S.discount/100,c.year),0);
+  // precise dated flows for XIRR (months → fractional years)
+  const flows=[{t:0,amt:-S.furnishing}];
+  p.rows.forEach(r=>flows.push({t:(Number(r.month)||0)/12, amt:-price*(Number(r.pct)||0)/100}));
+  for(let y=1;y<=holdY;y++) flows.push({t:y, amt:rows[y-1].net});
+  flows.push({t:holdY, amt:resaleNet_(holdY)});
+  const irr=computeIRR(flows);
+  const npv=flows.reduce((a,f)=>a+f.amt/Math.pow(1+S.discount/100,f.t),0);
   const coc=firstYear.net/totalCashInvested*100;
   const totalOp=rows.slice(0,holdY).reduce((a,r)=>a+r.net,0);
   const resaleGross=resaleGross_(holdY);
@@ -358,8 +373,8 @@ function resaleNet_(atYear){
   return gross*(1-(S.saleAgent+S.saleTax)/100);
 }
 
-function computeIRR(cf){
-  const npvAt=r=>cf.reduce((a,v,i)=>a+v/Math.pow(1+r,i),0);
+function computeIRR(flows){   // flows: [{t (years, can be fractional), amt}]
+  const npvAt=r=>flows.reduce((a,f)=>a+f.amt/Math.pow(1+r,f.t),0);
   let lo=-0.95,hi=5,flo=npvAt(lo),fhi=npvAt(hi);
   if(flo*fhi>0) return null;
   for(let i=0;i<200;i++){
@@ -408,7 +423,7 @@ function planEditor(k,p){
     <div class="erow" data-i="${i}">
       <input type="number" data-f="pct" value="${r.pct}" step="any">
       <input type="text" data-f="label" value="${escapeAttr(r.label)}">
-      <input type="number" data-f="year" value="${r.year}" step="1">
+      <input type="number" data-f="month" value="${r.month}" step="1">
       <button class="xbtn" data-x="${i}" title="Remove">×</button>
     </div>`).join("");
   const discRow = `<div class="erow" style="grid-template-columns:1fr 58px">
@@ -417,7 +432,7 @@ function planEditor(k,p){
     </div>`;
   return `<div class="peditor" data-editor="${k}">
     ${discRow}
-    <div class="ehead"><div class="hint">%</div><div class="hint">When (client text)</div><div class="hint">Year</div><div></div></div>
+    <div class="ehead"><div class="hint">%</div><div class="hint">When (client text)</div><div class="hint">Month</div><div></div></div>
     ${rowsHtml}
     <button class="addrow" data-add="${k}">+ Add payment</button>
     <div class="sumwarn ${okcls}">Total: ${sum}% ${sum===100?"✓":"— should be 100%"}</div>
@@ -443,7 +458,7 @@ function wirePlanEditors(){
       p.rows.splice(+b.dataset.x,1); render();
     }));
     const add=ed.querySelector("[data-add]");
-    if(add) add.addEventListener("click",()=>{ p.rows.push({pct:0,label:"Payment",year:1}); render(); });
+    if(add) add.addEventListener("click",()=>{ p.rows.push({pct:0,label:"Payment",month:6}); render(); });
   });
 }
 
@@ -455,8 +470,8 @@ const INPUT_DEFS=[
   ["_s1","Purchase"],
   ["price","Property price","$",""],
   ["furnishing","Furnishing / CapEx","$",""],
-  ["leaseTotal","Leasehold term","","yr"],
-  ["leaseRemain","Remaining lease","","yr"],
+  ["leaseTotal","Leasehold term (original)","","yr"],
+  ["leaseRemain","Remaining lease at purchase","","yr"],
   ["_s2","Revenue"],
   ["adr","Avg nightly rate (ADR)","$",""],
   ["occ","Occupancy","","%"],
@@ -555,18 +570,17 @@ function renderDonut(R){
   }).join("");
   $("donut").innerHTML=`<svg viewBox="0 0 230 230" width="230" height="230">${arcs}</svg>
     <div class="ctr"><small>Per year</small><b>${money(fy.revenue)}</b></div>`;
-  $("fleg").innerHTML=segs.map(s=>`<div class="frow"><span class="dot" style="background:${s[2]}"></span>
+  $("fleg").innerHTML=segs.map((s,i)=>`<div class="frow${i===0?' hero':''}"><span class="dot" style="background:${s[2]}"></span>
     <span class="fname">${s[0]}</span><span class="fval">${money(s[1])}</span></div>`).join("");
 }
 
 /* ---------- cashflow chart with Y axis ---------- */
 function renderCashflow(R){
   const svg=$("cfchart");
-  const W=760,H=260,padL=64,padR=14,padT=16,padB=30;
+  const W=760,H=272,padL=66,padR=18,padT=24,padB=30;
   const cf=R.cashflow;
   const cum=cf.map(c=>c.cum), ann=cf.map(c=>c.op);
   let minV=Math.min(0,...cum,...ann), maxV=Math.max(0,...cum,...ann);
-  // nice rounding
   const range=maxV-minV||1;
   const step=niceStep(range/4);
   minV=Math.floor(minV/step)*step; maxV=Math.ceil(maxV/step)*step;
@@ -578,29 +592,36 @@ function renderCashflow(R){
   let grid="",ylab="";
   for(let v=minV; v<=maxV+1e-6; v+=step){
     const yy=y(v);
-    grid+=`<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="${Math.abs(v)<1e-6?'#cfcfce':'#f0efed'}" stroke-width="1"/>`;
+    grid+=`<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="${Math.abs(v)<1e-6?'#c7c7c6':'#f1f0ee'}" stroke-width="1"/>`;
     ylab+=`<text x="${padL-8}" y="${(yy+3.5).toFixed(1)}" font-size="10.5" fill="#9a9a9f" text-anchor="end">${moneyShort(v)}</text>`;
   }
-  // bars = annual net profit
-  const bw=Math.min(22,(W-padL-padR)/cf.length*0.5);
+  // annual operating profit bars
+  const bw=Math.min(20,(W-padL-padR)/cf.length*0.5);
   const bars=cf.map((c,i)=>{
     if(i===0) return "";
     const top=c.op>=0?y(c.op):zeroY;
     const h=Math.abs(y(c.op)-zeroY);
-    return `<rect x="${(x(i)-bw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,h).toFixed(1)}" rx="3" fill="var(--orange)" opacity=".8"/>`;
+    return `<rect x="${(x(i)-bw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,h).toFixed(1)}" rx="2.5" fill="var(--orange)" opacity=".72"><title>Year ${c.year} · operating profit ${money(c.op)}</title></rect>`;
   }).join("");
-  // cumulative line
-  const path=cf.map((c,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(c.cum).toFixed(1)}`).join(" ");
-  const dots=cf.map((c,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(c.cum).toFixed(1)}" r="3.4" fill="var(--green)"/>`).join("");
+  // cumulative line + soft area fill
+  const linePath=cf.map((c,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(c.cum).toFixed(1)}`).join(" ");
+  const area=`${linePath} L${x(cf.length-1).toFixed(1)},${zeroY.toFixed(1)} L${x(0).toFixed(1)},${zeroY.toFixed(1)} Z`;
+  const dots=cf.map((c,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(c.cum).toFixed(1)}" r="3.6" fill="${c.cum>=0?'var(--green)':'var(--red)'}"><title>Year ${c.year} · cumulative ${money(c.cum)}${c.resale?` (incl. resale ${money(c.resale)})`:''}</title></circle>`).join("");
   const xlab=cf.map((c,i)=>`<text x="${x(i).toFixed(1)}" y="${H-9}" font-size="10.5" fill="#9a9a9f" text-anchor="middle">Y${c.year}</text>`).join("");
+  // break-even marker
   const pb=R.payback;
-  const pbLine=pb!==null?`<line x1="${x(pb).toFixed(1)}" y1="${padT}" x2="${x(pb).toFixed(1)}" y2="${H-padB}" stroke="#c9c9c9" stroke-width="1" stroke-dasharray="3 3"/>
-     <text x="${x(pb).toFixed(1)}" y="${padT-4}" font-size="10" fill="#a7a7ab" text-anchor="middle">break-even</text>`:"";
+  const pbLine=pb!==null?`<line x1="${x(pb).toFixed(1)}" y1="${padT}" x2="${x(pb).toFixed(1)}" y2="${H-padB}" stroke="#c4c4c3" stroke-width="1" stroke-dasharray="3 3"/>
+     <text x="${x(pb).toFixed(1)}" y="${(padT-8).toFixed(1)}" font-size="10" font-weight="600" fill="#8a8a92" text-anchor="middle">break-even · Y${pb}</text>`:"";
+  // final total label
+  const last=cf[cf.length-1];
+  const totLbl=`<text x="${(x(cf.length-1)-5).toFixed(1)}" y="${(y(last.cum)-10).toFixed(1)}" font-size="11.5" font-weight="700" fill="var(--green-d)" text-anchor="end">${money(last.cum)}</text>`;
 
   svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
-  svg.innerHTML=`${grid}${ylab}${pbLine}${bars}
-    <path d="${path}" fill="none" stroke="var(--green)" stroke-width="2.4"/>
-    ${dots}${xlab}
+  svg.innerHTML=`${grid}${ylab}
+    <path d="${area}" fill="var(--green)" opacity=".09"/>
+    ${pbLine}${bars}
+    <path d="${linePath}" fill="none" stroke="var(--green-d)" stroke-width="2.4"/>
+    ${dots}${totLbl}${xlab}
     <text transform="rotate(-90 14 ${(H/2).toFixed(0)})" x="14" y="${(H/2).toFixed(0)}" font-size="10.5" fill="#b6b6ba" text-anchor="middle">Cash, ${CUR}</text>`;
 }
 function niceStep(x){
@@ -622,7 +643,8 @@ function renderAmort(R){
   }
   body+="</tbody>";
   $("amortTable").innerHTML=head+body;
-  $("amortNote").innerHTML=`Resale = price × (1+appreciation)<sup>yrs</sup> × decay, where decay never drops below the
+  $("amortNote").innerHTML=`Value decay is driven by <b>remaining lease at purchase</b> (${S.leaseRemain} yr) — each year the remaining term drops,
+    so the resale right is worth less. Resale = price × (1+appreciation)<sup>yrs</sup> × decay, with decay held above the
     <b>${S.leaseFloor}%</b> floor while the lease runs. Exit costs: agent <b>${S.saleAgent}%</b> + investor sale tax <b>${S.saleTax}%</b>
     (on gross sale price). At Year ${R.years}: gross ${money(R.resaleGross)}, exit costs −${money(R.saleCosts)},
     net <b>${money(R.resaleNet)}</b> → capital ${R.capGain>=0?"gain":"loss"} <b>${money(R.capGain)}</b> vs. purchase.`;
@@ -659,6 +681,7 @@ function paint(R){
   renderCashflow(R);
   renderAmort(R);
   renderPlanNote(R);
+  syncCfTabs();
   $("foot").innerHTML=`Villa Investment Calculator · assumptions editable · ${CUR} @ 1 USD = ${Number(S.fx).toLocaleString()} IDR`;
 }
 function refreshPlanVisuals(){
@@ -681,6 +704,10 @@ $("curSeg").querySelectorAll("button").forEach(b=>{
 $("sumTabs").querySelectorAll("button").forEach(b=>{
   b.onclick=()=>{SUMH=b.dataset.h;$("sumTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderSummary(calc());};
 });
+$("cfTabs").querySelectorAll("button").forEach(b=>{
+  b.onclick=()=>{S.hold=parseInt(b.dataset.h,10);render();};
+});
+function syncCfTabs(){$("cfTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",parseInt(x.dataset.h,10)===Math.round(S.hold)));}
 $("editPlans").onclick=()=>{EDIT=!EDIT;$("editPlans").classList.toggle("on",EDIT);$("editPlans").textContent=EDIT?"Done editing":"Edit plans";renderPlans();};
 $("fx").oninput=()=>softRefresh();
 $("reset").onclick=()=>{S={...DEFAULTS};render();};
