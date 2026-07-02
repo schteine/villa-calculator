@@ -126,8 +126,10 @@
 
   /* cashflow chart */
   .cf{margin-top:16px}
-  .cflegend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);padding:2px 20px 4px}
+  .cflegend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);padding:2px 20px 4px}
   .cflegend span{display:inline-flex;align-items:center;gap:6px}
+  .cfcontrols{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:8px 20px 2px}
+  .cfcontrols .cflegend{padding:0}
   .cfbody{padding:6px 16px 18px}
   .cfchart{width:100%;height:260px}
   .amort{margin-top:16px}
@@ -219,12 +221,17 @@
         <button data-h="20">20 yr</button>
       </div>
     </div>
-    <div class="cflegend">
-      <span><i class="dot" style="background:var(--green)"></i>Cumulative net cash</span>
-      <span><i class="dot" style="background:var(--orange)"></i>Annual operating profit</span>
-      <span><i class="dot" style="background:#c9c9c9"></i>Break-even</span>
+    <div class="cfcontrols">
+      <div class="tabs" id="cfView">
+        <button data-v="cumulative" class="on">Cumulative</button>
+        <button data-v="annual">Annual</button>
+        <button data-v="breakdown">Breakdown</button>
+        <button data-v="compare">Compare plans</button>
+      </div>
+      <div class="cflegend" id="cfLegend"></div>
     </div>
     <div class="cfbody"><svg class="cfchart" id="cfchart" preserveAspectRatio="none"></svg></div>
+    <div class="note" id="cfCaption"></div>
   </div>
 
   <!-- Leasehold amortization -->
@@ -266,6 +273,7 @@ let CUR = "USD";
 let SUMH = "5";
 let PLAN = "inst";
 let EDIT = false;
+let CHARTVIEW = "cumulative";
 
 /* editable plans */
 let PLANS = {
@@ -383,6 +391,24 @@ function computeIRR(flows){   // flows: [{t (years, can be fractional), amt}]
     if(flo*fm<0){hi=mid;fhi=fm;} else {lo=mid;flo=fm;}
   }
   return (lo+hi)/2;
+}
+
+// cashflow (annual buckets + XIRR) for any plan, reusing shared operating rows
+function planCashflow(pKey, rows, holdY){
+  const p=PLANS[pKey], price=planPrice(p);
+  const cf=[]; let cum=0, pb=null;
+  for(let y=0;y<=holdY;y++){
+    let c=y===0?-S.furnishing:rows[y-1].net;
+    p.rows.forEach(r=>{ if(Math.round((Number(r.month)||0)/12)===y) c-=price*(Number(r.pct)||0)/100; });
+    if(y===holdY) c+=resaleNet_(holdY);
+    cum+=c; cf.push({year:y,cum,op:(y===0?0:rows[y-1].net),net:c});
+    if(cum>=0 && pb===null) pb=y;
+  }
+  const flows=[{t:0,amt:-S.furnishing}];
+  p.rows.forEach(r=>flows.push({t:(Number(r.month)||0)/12, amt:-price*(Number(r.pct)||0)/100}));
+  for(let y=1;y<=holdY;y++) flows.push({t:y, amt:rows[y-1].net});
+  flows.push({t:holdY, amt:resaleNet_(holdY)});
+  return {cf, irr:computeIRR(flows), payback:pb};
 }
 
 /* ---------- plans render ---------- */
@@ -575,54 +601,82 @@ function renderDonut(R){
 }
 
 /* ---------- cashflow chart with Y axis ---------- */
-function renderCashflow(R){
-  const svg=$("cfchart");
-  const W=760,H=272,padL=66,padR=18,padT=24,padB=30;
-  const cf=R.cashflow;
-  const cum=cf.map(c=>c.cum), ann=cf.map(c=>c.op);
-  let minV=Math.min(0,...cum,...ann), maxV=Math.max(0,...cum,...ann);
-  const range=maxV-minV||1;
-  const step=niceStep(range/4);
-  minV=Math.floor(minV/step)*step; maxV=Math.ceil(maxV/step)*step;
-  const x=i=>padL+(W-padL-padR)*(i/(cf.length-1||1));
-  const y=v=>padT+(H-padT-padB)*(1-(v-minV)/((maxV-minV)||1));
-  const zeroY=y(0);
+function lg(items){return items.map(it=>`<span><i class="dot" style="background:${it[0]}"></i>${it[1]}</span>`).join("");}
 
-  // gridlines + Y labels
-  let grid="",ylab="";
-  for(let v=minV; v<=maxV+1e-6; v+=step){
-    const yy=y(v);
-    grid+=`<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="${Math.abs(v)<1e-6?'#c7c7c6':'#f1f0ee'}" stroke-width="1"/>`;
-    ylab+=`<text x="${padL-8}" y="${(yy+3.5).toFixed(1)}" font-size="10.5" fill="#9a9a9f" text-anchor="end">${moneyShort(v)}</text>`;
+function renderCashflow(R){
+  const svg=$("cfchart"), view=CHARTVIEW;
+  const W=760,H=272,padL=66,padR=18,padT=24,padB=30;
+  const cf=R.cashflow, n=cf.length;
+  const x=i=>padL+(W-padL-padR)*(i/(n-1||1));
+  function axis(minV,maxV){
+    const range=maxV-minV||1, step=niceStep(range/4);
+    minV=Math.floor(minV/step)*step; maxV=Math.ceil(maxV/step)*step;
+    const y=v=>padT+(H-padT-padB)*(1-(v-minV)/((maxV-minV)||1));
+    let grid="",ylab="";
+    for(let v=minV;v<=maxV+1e-6;v+=step){const yy=y(v);
+      grid+=`<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="${Math.abs(v)<1e-6?'#c7c7c6':'#f1f0ee'}" stroke-width="1"/>`;
+      ylab+=`<text x="${padL-8}" y="${(yy+3.5).toFixed(1)}" font-size="10.5" fill="#9a9a9f" text-anchor="end">${moneyShort(v)}</text>`;}
+    return {y,grid,ylab};
   }
-  // annual operating profit bars
-  const bw=Math.min(20,(W-padL-padR)/cf.length*0.5);
-  const bars=cf.map((c,i)=>{
-    if(i===0) return "";
-    const top=c.op>=0?y(c.op):zeroY;
-    const h=Math.abs(y(c.op)-zeroY);
-    return `<rect x="${(x(i)-bw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,h).toFixed(1)}" rx="2.5" fill="var(--orange)" opacity=".72"><title>Year ${c.year} · operating profit ${money(c.op)}</title></rect>`;
-  }).join("");
-  // cumulative line + soft area fill
-  const linePath=cf.map((c,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(c.cum).toFixed(1)}`).join(" ");
-  const area=`${linePath} L${x(cf.length-1).toFixed(1)},${zeroY.toFixed(1)} L${x(0).toFixed(1)},${zeroY.toFixed(1)} Z`;
-  const dots=cf.map((c,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(c.cum).toFixed(1)}" r="3.6" fill="${c.cum>=0?'var(--green)':'var(--red)'}"><title>Year ${c.year} · cumulative ${money(c.cum)}${c.resale?` (incl. resale ${money(c.resale)})`:''}</title></circle>`).join("");
   const xlab=cf.map((c,i)=>`<text x="${x(i).toFixed(1)}" y="${H-9}" font-size="10.5" fill="#9a9a9f" text-anchor="middle">Y${c.year}</text>`).join("");
-  // break-even marker
-  const pb=R.payback;
-  const pbLine=pb!==null?`<line x1="${x(pb).toFixed(1)}" y1="${padT}" x2="${x(pb).toFixed(1)}" y2="${H-padB}" stroke="#c4c4c3" stroke-width="1" stroke-dasharray="3 3"/>
-     <text x="${x(pb).toFixed(1)}" y="${(padT-8).toFixed(1)}" font-size="10" font-weight="600" fill="#8a8a92" text-anchor="middle">break-even · Y${pb}</text>`:"";
-  // final total label
-  const last=cf[cf.length-1];
-  const totLbl=`<text x="${(x(cf.length-1)-5).toFixed(1)}" y="${(y(last.cum)-10).toFixed(1)}" font-size="11.5" font-weight="700" fill="var(--green-d)" text-anchor="end">${money(last.cum)}</text>`;
+  const yTitle=`<text transform="rotate(-90 14 ${(H/2).toFixed(0)})" x="14" y="${(H/2).toFixed(0)}" font-size="10.5" fill="#b6b6ba" text-anchor="middle">Cash, ${CUR}</text>`;
+  let inner="", legend="", caption="";
+
+  if(view==="cumulative"){
+    const cum=cf.map(c=>c.cum), ann=cf.map(c=>c.op);
+    const A=axis(Math.min(0,...cum,...ann),Math.max(0,...cum,...ann)), y=A.y, zeroY=y(0);
+    const bw=Math.min(20,(W-padL-padR)/n*0.5);
+    const bars=cf.map((c,i)=>i===0?"":`<rect x="${(x(i)-bw/2).toFixed(1)}" y="${(c.op>=0?y(c.op):zeroY).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,Math.abs(y(c.op)-zeroY)).toFixed(1)}" rx="2.5" fill="var(--orange)" opacity=".5"><title>Year ${c.year} · profit ${money(c.op)}</title></rect>`).join("");
+    const linePath=cf.map((c,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(c.cum).toFixed(1)}`).join(" ");
+    const area=`${linePath} L${x(n-1).toFixed(1)},${zeroY.toFixed(1)} L${x(0).toFixed(1)},${zeroY.toFixed(1)} Z`;
+    const dots=cf.map((c,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(c.cum).toFixed(1)}" r="3.6" fill="${c.cum>=0?'var(--green)':'var(--red)'}"><title>Year ${c.year} · cumulative ${money(c.cum)}${c.resale?` (incl. resale ${money(c.resale)})`:''}</title></circle>`).join("");
+    const pb=R.payback;
+    const pbLine=pb!==null?`<line x1="${x(pb).toFixed(1)}" y1="${padT}" x2="${x(pb).toFixed(1)}" y2="${H-padB}" stroke="#c4c4c3" stroke-width="1" stroke-dasharray="3 3"/><text x="${x(pb).toFixed(1)}" y="${(padT-8).toFixed(1)}" font-size="10" font-weight="600" fill="#8a8a92" text-anchor="middle">break-even · Y${pb}</text>`:"";
+    const last=cf[n-1];
+    const totLbl=`<text x="${(x(n-1)-5).toFixed(1)}" y="${(y(last.cum)-10).toFixed(1)}" font-size="11.5" font-weight="700" fill="var(--green-d)" text-anchor="end">${money(last.cum)}</text>`;
+    inner=`${A.grid}${A.ylab}<path d="${area}" fill="var(--green)" opacity=".09"/>${pbLine}${bars}<path d="${linePath}" fill="none" stroke="var(--green-d)" stroke-width="2.4"/>${dots}${totLbl}${xlab}${yTitle}`;
+    legend=lg([["var(--green)","Cumulative net cash"],["var(--orange)","Annual profit"],["#c9c9c9","Break-even"]]);
+  }
+  else if(view==="annual"){
+    const ann=cf.slice(1).map(c=>c.op);
+    const A=axis(Math.min(0,...ann,0),Math.max(0,...ann)), y=A.y, zeroY=y(0);
+    const bw=Math.min(32,(W-padL-padR)/n*0.62);
+    const bars=cf.map((c,i)=>i===0?"":`<rect x="${(x(i)-bw/2).toFixed(1)}" y="${(c.op>=0?y(c.op):zeroY).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,Math.abs(y(c.op)-zeroY)).toFixed(1)}" rx="3" fill="var(--orange)" opacity=".85"><title>Year ${c.year} · ${money(c.op)}</title></rect>`).join("");
+    const vlab=cf.map((c,i)=>i===0?"":`<text x="${x(i).toFixed(1)}" y="${(y(c.op)-6).toFixed(1)}" font-size="9.5" fill="#a06a1e" text-anchor="middle">${moneyShort(c.op)}</text>`).join("");
+    inner=`${A.grid}${A.ylab}${bars}${vlab}${xlab}${yTitle}`;
+    legend=lg([["var(--orange)","Annual operating profit"]]);
+  }
+  else if(view==="breakdown"){
+    const segsDef=[["net","Net profit","var(--green)"],["tax","Tax","#a83232"],["mgmt","Management","var(--red)"],["gen","General costs","var(--orange)"],["dir","Direct comm.","#e0b04a"],["ota","OTA comm.","var(--red-l)"]];
+    const maxRev=Math.max(...R.rows.slice(0,R.years).map(r=>r.revenue));
+    const A=axis(0,maxRev), y=A.y;
+    const bw=Math.min(32,(W-padL-padR)/n*0.62);
+    let bars="";
+    for(let i=1;i<n;i++){ const r=R.rows[i-1]; if(!r) continue; let acc=0;
+      segsDef.forEach(sd=>{ const val=r[sd[0]]; const y0=y(acc), y1=y(acc+val); acc+=val;
+        bars+=`<rect x="${(x(i)-bw/2).toFixed(1)}" y="${y1.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0.4,y0-y1).toFixed(1)}" fill="${sd[2]}" opacity=".92"><title>Year ${r.year} · ${sd[1]} ${money(val)}</title></rect>`; });
+    }
+    inner=`${A.grid}${A.ylab}${bars}${xlab}${yTitle}`;
+    legend=lg(segsDef.map(s=>[s[2],s[1]]));
+  }
+  else { // compare
+    const a=planCashflow("full",R.rows,R.years), b=planCashflow("inst",R.rows,R.years);
+    const all=a.cf.map(c=>c.cum).concat(b.cf.map(c=>c.cum),[0]);
+    const A=axis(Math.min(...all),Math.max(...all)), y=A.y, zeroY=y(0);
+    const drawLine=(cx,color)=>{const pth=cx.cf.map((c,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(c.cum).toFixed(1)}`).join(" ");
+      const d=cx.cf.map((c,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(c.cum).toFixed(1)}" r="3" fill="${color}"><title>Year ${c.year} · ${money(c.cum)}</title></circle>`).join("");
+      return `<path d="${pth}" fill="none" stroke="${color}" stroke-width="2.4"/>${d}`;};
+    inner=`${A.grid}${A.ylab}<line x1="${padL}" y1="${zeroY.toFixed(1)}" x2="${W-padR}" y2="${zeroY.toFixed(1)}" stroke="#c7c7c6"/>${drawLine(a,'var(--green-d)')}${drawLine(b,'#3b7dd6')}${xlab}${yTitle}`;
+    legend=lg([["var(--green-d)","Full prepayment"],["#3b7dd6","Installment"]]);
+    const af=a.cf[a.cf.length-1].cum, bf=b.cf[b.cf.length-1].cum;
+    caption=`At Year ${R.years}: Full prepayment ends at <b>${money(af)}</b> (IRR ${a.irr!==null?(a.irr*100).toFixed(1)+'%':'—'}), Installment at <b>${money(bf)}</b> (IRR ${b.irr!==null?(b.irr*100).toFixed(1)+'%':'—'}). ${af>=bf?'Full prepayment':'Installment'} returns more cash by exit.`;
+  }
 
   svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
-  svg.innerHTML=`${grid}${ylab}
-    <path d="${area}" fill="var(--green)" opacity=".09"/>
-    ${pbLine}${bars}
-    <path d="${linePath}" fill="none" stroke="var(--green-d)" stroke-width="2.4"/>
-    ${dots}${totLbl}${xlab}
-    <text transform="rotate(-90 14 ${(H/2).toFixed(0)})" x="14" y="${(H/2).toFixed(0)}" font-size="10.5" fill="#b6b6ba" text-anchor="middle">Cash, ${CUR}</text>`;
+  svg.innerHTML=inner;
+  $("cfLegend").innerHTML=legend;
+  if(view!=="compare") caption=`Selected plan · IRR <b>${R.irr!==null?(R.irr*100).toFixed(1)+'%':'—'}</b> · payback <b>${R.payback===null?'—':'Y'+R.payback}</b> · total ROI <b>${R.roi.toFixed(0)}%</b> (${money(R.totalReturn)}). Resale is net of ${S.saleAgent}% agent + ${S.saleTax}% sale tax.`;
+  $("cfCaption").innerHTML=caption;
 }
 function niceStep(x){
   const p=Math.pow(10,Math.floor(Math.log10(x||1)));
@@ -708,6 +762,9 @@ $("cfTabs").querySelectorAll("button").forEach(b=>{
   b.onclick=()=>{S.hold=parseInt(b.dataset.h,10);render();};
 });
 function syncCfTabs(){$("cfTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",parseInt(x.dataset.h,10)===Math.round(S.hold)));}
+$("cfView").querySelectorAll("button").forEach(b=>{
+  b.onclick=()=>{CHARTVIEW=b.dataset.v;$("cfView").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderCashflow(calc());};
+});
 $("editPlans").onclick=()=>{EDIT=!EDIT;$("editPlans").classList.toggle("on",EDIT);$("editPlans").textContent=EDIT?"Done editing":"Edit plans";renderPlans();};
 $("fx").oninput=()=>softRefresh();
 $("reset").onclick=()=>{S={...DEFAULTS};render();};
