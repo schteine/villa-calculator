@@ -52,6 +52,9 @@
   .plans-hd h2{font-size:16px;margin:0;font-weight:650}
   .editbtn{border:1px solid var(--line2);background:#fff;border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;color:#55555c;cursor:pointer}
   .editbtn.on{background:#111114;color:#fff;border-color:#111114}
+  a.editbtn{text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+  .urlin{border:1px solid var(--line2);background:var(--field);border-radius:8px;padding:6px 9px;font-size:12.5px;color:var(--ink);width:200px;outline:none}
+  .urlin:focus{border-color:#bcbcbb}
 
   /* payment plan cards */
   .plans{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:18px}
@@ -205,6 +208,7 @@
         <button data-cur="USD" class="on">USD</button>
         <button data-cur="IDR">IDR</button>
       </div>
+      <a class="editbtn" id="backListing" target="_blank" rel="noopener">← Listing</a>
       <button class="editbtn" id="themeBtn" title="Toggle theme">◐ Dark</button>
       <button class="editbtn printbtn" id="printBtn">Print / PDF</button>
     </div>
@@ -220,7 +224,10 @@
   <!-- Inputs -->
   <div class="card inputs">
     <div class="ch"><h2>Assumptions</h2>
-      <button id="reset" class="tabs" style="cursor:pointer"><span style="padding:0 6px">Reset defaults</span></button>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="listingUrl" class="urlin" type="text" placeholder="Listing link (URL for ← Listing button)">
+        <button id="reset" class="tabs" style="cursor:pointer"><span style="padding:0 6px">Reset defaults</span></button>
+      </div>
     </div>
     <div class="inbody" id="inputs"></div>
   </div>
@@ -867,6 +874,17 @@ $("themeBtn").onclick=()=>{
 $("printBtn").onclick=()=>window.print();
 $("fx").oninput=()=>softRefresh();
 $("reset").onclick=()=>{S={...DEFAULTS};render();};
+
+// back-to-listing button
+const DEFAULT_LISTING="https://docs.google.com/spreadsheets/d/1hZfsLVapt8Tk1VgjHe_XLyQTnkV8ZrLn_GtJxpebSOA/edit";
+function updateBackListing(){
+  const u=$("listingUrl").value.trim(), btn=$("backListing");
+  if(u){ btn.href=u; btn.style.display="inline-flex"; }
+  else { btn.removeAttribute("href"); btn.style.display="none"; }
+}
+$("listingUrl").value=DEFAULT_LISTING;
+$("listingUrl").addEventListener("input",updateBackListing);
+updateBackListing();
 
 render();
 </script>
