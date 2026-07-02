@@ -11,8 +11,26 @@
     --green:#78be3f; --green-d:#5aa02a;
     --red:#d64545; --red-l:#e88a8a; --orange:#e6952f; --orange-d:#c76a1e;
     --field:#faf9f7; --shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.05);
-    --r:18px;
+    --r:18px; --grp:#faf9f7; --segbg:#ededea; --oncard:#111114;
   }
+  :root[data-theme="dark"]{
+    --bg:#14151a; --card:#1e2027; --ink:#eceef2; --muted:#9a9ca6;
+    --line:#2a2d36; --line2:#343843; --field:#23262e; --grp:#23262e; --segbg:#2a2d36; --oncard:#000000;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 26px rgba(0,0,0,.4);
+  }
+  :root[data-theme="dark"] .seg button.on{background:#eceef2;color:#14151a}
+  :root[data-theme="dark"] .tabs button.on{background:#3a3e49;color:#fff}
+  :root[data-theme="dark"] .plan.sel{border-color:#eceef2}
+  :root[data-theme="dark"] .plan .pill{background:#eceef2;color:#14151a}
+  :root[data-theme="dark"] .frow.hero{background:#1f2a17;border-color:#33461f}
+  :root[data-theme="dark"] .plan .disc{background:#26331a;color:#9fd36a}
+
+  /* mode visibility */
+  .simple-only{display:none}
+  body.simple .pro-only{display:none}
+  body.simple .simple-only{display:block}
+  body.simple .kpis.simple-only{display:grid}
+  body.simple [data-adv]{display:none}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;background:var(--bg);color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
@@ -23,7 +41,7 @@
   .brand h1{font-size:19px;margin:0;font-weight:650;letter-spacing:-.01em}
   .brand span{font-size:12.5px;color:var(--muted)}
   .toggles{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .seg{display:inline-flex;background:#ededea;border-radius:999px;padding:3px}
+  .seg{display:inline-flex;background:var(--segbg);border-radius:999px;padding:3px}
   .seg button{border:0;background:transparent;padding:7px 15px;border-radius:999px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
   .seg button.on{background:#111114;color:#fff}
   .rate-inline{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
@@ -88,23 +106,23 @@
   .kpi .k{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
   .kpi .v{font-size:24px;font-weight:700;letter-spacing:-.02em;margin-top:6px;font-variant-numeric:tabular-nums}
   .kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
-  .kpi.hl{background:#111114;color:#fff}
+  .kpi.hl{background:var(--oncard);color:#fff}
   .kpi.hl .k,.kpi.hl .s{color:#a9a9ad}
   .kpi.hl .v{color:var(--green)}
 
   /* summary table */
   table{width:100%;border-collapse:collapse}
   .sumtbl{padding:4px 0 6px}
-  thead th{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:right;padding:12px 20px 10px;background:#faf9f7}
+  thead th{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:right;padding:12px 20px 10px;background:var(--grp)}
   thead th:first-child{text-align:left}
   tbody td{font-size:13.5px;text-align:right;padding:11px 20px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
   tbody td:first-child{text-align:left;color:#3a3a40}
-  tr.grp td{background:#faf9f7;color:#9a9aa0;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:8px 20px;border-top:0}
+  tr.grp td{background:var(--grp);color:#9a9aa0;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:8px 20px;border-top:0}
   tr.strong td{font-weight:700;color:var(--ink)}
   td.neg{color:var(--red)}
-  tr.net td{background:#111114;color:#fff;font-weight:700}
+  tr.net td{background:var(--oncard);color:#fff;font-weight:700}
   tr.net td.pos{color:var(--green)}
-  .tabs{display:inline-flex;background:#ededea;border-radius:999px;padding:3px}
+  .tabs{display:inline-flex;background:var(--segbg);border-radius:999px;padding:3px}
   .tabs button{border:0;background:transparent;padding:6px 13px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer}
   .tabs button.on{background:#fff;color:#111114;box-shadow:0 1px 2px rgba(0,0,0,.08)}
 
@@ -148,6 +166,23 @@
     .wrap{padding:16px 12px 44px}
     thead th,tbody td{padding-left:14px;padding-right:14px}
   }
+
+  /* simple headline cards */
+  .kpi.big .v{font-size:27px}
+  .kpi .plain{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.35}
+  .simple-lead{font-size:13.5px;color:var(--muted);margin:2px 0 14px;max-width:640px;line-height:1.5}
+
+  /* print / PDF one-pager */
+  @media print{
+    :root[data-theme="dark"]{--bg:#fff;--card:#fff;--ink:#111114;--muted:#6b6b72;--line:#e6e6e4;--line2:#e0e0de;--field:#fff;--grp:#f4f4f2;--oncard:#111114}
+    body{background:#fff}
+    .wrap{max-width:100%;padding:0}
+    .toggles,.editbtn,#reset,.peditor,.cfcontrols .tabs,#cfTabs,.plans-hd .editbtn,.printbtn{display:none!important}
+    .card{box-shadow:none;border:1px solid #e6e6e4;break-inside:avoid}
+    .cf,.amort,.inputs{break-inside:avoid}
+    .foot{display:none}
+    @page{margin:14mm}
+  }
 </style>
 </head>
 <body>
@@ -159,6 +194,10 @@
       <span>Live returns on your assumptions — Bali leasehold</span>
     </div>
     <div class="toggles">
+      <div class="seg" id="modeSeg">
+        <button data-m="simple">Simple</button>
+        <button data-m="pro" class="on">Pro</button>
+      </div>
       <div class="rate-inline">1 USD =
         <input id="fx" type="number" value="16300" step="50"> IDR
       </div>
@@ -166,13 +205,15 @@
         <button data-cur="USD" class="on">USD</button>
         <button data-cur="IDR">IDR</button>
       </div>
+      <button class="editbtn" id="themeBtn" title="Toggle theme">◐ Dark</button>
+      <button class="editbtn printbtn" id="printBtn">Print / PDF</button>
     </div>
   </div>
 
   <!-- Payment plans -->
   <div class="plans-hd">
     <h2>Payment plans</h2>
-    <button class="editbtn" id="editPlans">Edit plans</button>
+    <button class="editbtn pro-only" id="editPlans">Edit plans</button>
   </div>
   <div class="plans" id="plans"></div>
 
@@ -184,10 +225,14 @@
     <div class="inbody" id="inputs"></div>
   </div>
 
-  <!-- KPI strip -->
-  <div class="kpis" id="kpis"></div>
+  <!-- KPI strip (Pro) -->
+  <div class="kpis pro-only" id="kpis"></div>
 
-  <div class="grid">
+  <!-- Simple headline cards -->
+  <p class="simple-lead simple-only" id="simpleLead"></p>
+  <div class="kpis simple-only" id="simpleCards"></div>
+
+  <div class="grid pro-only">
     <!-- Investment summary -->
     <div class="card">
       <div class="ch">
@@ -225,8 +270,8 @@
       <div class="tabs" id="cfView">
         <button data-v="cumulative" class="on">Cumulative</button>
         <button data-v="annual">Annual</button>
-        <button data-v="breakdown">Breakdown</button>
-        <button data-v="compare">Compare plans</button>
+        <button data-v="breakdown" class="pro-only">Breakdown</button>
+        <button data-v="compare" class="pro-only">Compare plans</button>
       </div>
       <div class="cflegend" id="cfLegend"></div>
     </div>
@@ -234,8 +279,15 @@
     <div class="note" id="cfCaption"></div>
   </div>
 
+  <!-- Simple summary (plain, per year) -->
+  <div class="card simple-only" id="simpleSummaryCard">
+    <div class="ch"><h2>Where your money goes (per year)</h2></div>
+    <div class="sumtbl"><table id="simpleSummary"></table></div>
+    <div class="note" id="simpleNote"></div>
+  </div>
+
   <!-- Leasehold amortization -->
-  <div class="card amort">
+  <div class="card amort pro-only">
     <div class="ch"><h2>Leasehold amortization &amp; resale value</h2></div>
     <div class="abody"><table id="amortTable"></table></div>
     <div class="note" id="amortNote"></div>
@@ -274,6 +326,8 @@ let SUMH = "5";
 let PLAN = "inst";
 let EDIT = false;
 let CHARTVIEW = "cumulative";
+let MODE = "pro";      // "pro" | "simple"
+let THEME = "light";   // "light" | "dark"
 
 /* editable plans */
 let PLANS = {
@@ -495,32 +549,32 @@ function escapeAttr(s){return String(s).replace(/"/g,"&quot;");}
 const INPUT_DEFS=[
   ["_s1","Purchase"],
   ["price","Property price","$",""],
-  ["furnishing","Furnishing / CapEx","$",""],
-  ["leaseTotal","Leasehold term (original)","","yr"],
+  ["furnishing","Furnishing / CapEx","$","",1],
+  ["leaseTotal","Leasehold term (original)","","yr",1],
   ["leaseRemain","Remaining lease at purchase","","yr"],
   ["_s2","Revenue"],
   ["adr","Avg nightly rate (ADR)","$",""],
   ["occ","Occupancy","","%"],
-  ["adrGrowth","ADR growth / yr","","%"],
-  ["appr","Asset appreciation / yr","","%"],
-  ["_s3","Operating costs"],
-  ["otaComm","OTA commission","","%"],
-  ["dirComm","Direct booking comm.","","%"],
-  ["genCosts","General costs","","%"],
-  ["mgmtComm","Management commission","","%"],
-  ["taxRate","Rental income tax","","%"],
+  ["adrGrowth","ADR growth / yr","","%",1],
+  ["appr","Asset appreciation / yr","","%",1],
+  ["_s3","Operating costs","adv"],
+  ["otaComm","OTA commission","","%",1],
+  ["dirComm","Direct booking comm.","","%",1],
+  ["genCosts","General costs","","%",1],
+  ["mgmtComm","Management commission","","%",1],
+  ["taxRate","Rental income tax","","%",1],
   ["_s4","Exit"],
   ["hold","Holding period","","yr"],
-  ["discount","Discount rate (NPV)","","%"],
-  ["leaseFloor","Value floor at lease end","","%"],
-  ["saleAgent","Sale agent commission","","%"],
-  ["saleTax","Sale tax (investor)","","%"]
+  ["discount","Discount rate (NPV)","","%",1],
+  ["leaseFloor","Value floor at lease end","","%",1],
+  ["saleAgent","Sale agent commission","","%",1],
+  ["saleTax","Sale tax (investor)","","%",1]
 ];
 function renderInputs(){
   $("inputs").innerHTML=INPUT_DEFS.map(d=>{
-    if(d[0].startsWith("_s")) return `<div class="sec-lbl">${d[1]}</div>`;
-    const [key,label,pre,suf]=d;
-    return `<div class="fld"><label>${label}</label>
+    if(d[0].startsWith("_s")) return `<div class="sec-lbl"${d[2]==="adv"?" data-adv":""}>${d[1]}</div>`;
+    const [key,label,pre,suf,adv]=d;
+    return `<div class="fld"${adv?" data-adv":""}><label>${label}</label>
       <div class="inw">${pre?`<span>${pre}</span>`:""}
       <input type="number" data-k="${key}" value="${S[key]}" step="any">
       ${suf?`<span>${suf}</span>`:""}</div></div>`;
@@ -573,6 +627,31 @@ function renderKPIs(R){
     <div class="kpi"><div class="k">Cash-on-cash</div><div class="v">${R.coc.toFixed(1)}%</div><div class="s">year 1 yield</div></div>
     <div class="kpi"><div class="k">Payback</div><div class="v">${R.payback===null?"—":R.payback+" yr"}</div><div class="s">to recover capital</div></div>
     <div class="kpi hl"><div class="k">Total ROI</div><div class="v">${R.roi.toFixed(0)}%</div><div class="s">${money(R.totalReturn)} over hold</div></div>`;
+}
+
+/* ---------- simple (buyer) view ---------- */
+function renderSimple(R){
+  const fy=R.firstYear;
+  $("simpleLead").innerHTML=`You invest about <b>${money(R.totalCashInvested)}</b> into this villa. It earns roughly
+    <b>${money(fy.net)}</b> per year after all costs and tax (~${R.coc.toFixed(1)}% of your money), returns your capital in about
+    <b>${R.payback===null?'—':R.payback+' years'}</b>, and can be resold for around <b>${money(R.resaleNet)}</b> after ${R.years} years —
+    a total profit of about <b>${money(R.totalReturn)}</b> (${R.roi.toFixed(0)}% ROI).`;
+  $("simpleCards").innerHTML=`
+    <div class="kpi big"><div class="k">Your investment</div><div class="v">${money(R.totalCashInvested)}</div><div class="plain">purchase + furniture, all in</div></div>
+    <div class="kpi big"><div class="k">Income / year</div><div class="v">${money(fy.net)}</div><div class="plain">after all costs & tax · ${R.coc.toFixed(1)}% yield</div></div>
+    <div class="kpi big"><div class="k">Pays back in</div><div class="v">${R.payback===null?'—':R.payback+' yr'}</div><div class="plain">when rent returns your cash</div></div>
+    <div class="kpi big hl"><div class="k">Total profit · ${R.years} yr</div><div class="v">${money(R.totalReturn)}</div><div class="plain">incl. resale · ${R.roi.toFixed(0)}% ROI</div></div>`;
+
+  const running=fy.ota+fy.dir+fy.gen+fy.mgmt;
+  const row=(l,pm,py,cls)=>`<tr class="${cls||''}"><td>${l}</td><td class="${pm<0?'neg':''}">${money(pm)}</td><td class="${py<0?'neg':''}">${money(py)}</td></tr>`;
+  $("simpleSummary").innerHTML=`<thead><tr><th>Item</th><th>Per month</th><th>Per year</th></tr></thead><tbody>
+    ${row("Rental income",fy.revenue/12,fy.revenue)}
+    ${row("Running costs (management, fees, upkeep)",-running/12,-running)}
+    ${row("Tax",-fy.tax/12,-fy.tax)}
+    <tr class="net"><td>Net profit</td><td class="pos">${money(fy.net/12)}</td><td class="pos">${money(fy.net)}</td></tr>
+  </tbody>`;
+  $("simpleNote").innerHTML=`Estimated resale after ${R.years} years: <b>${money(R.resaleNet)}</b> (net of ${S.saleAgent}% agent + ${S.saleTax}% sale tax).
+    Figures are estimates for discussion, not a guarantee of returns.`;
 }
 
 /* ---------- donut ---------- */
@@ -730,6 +809,7 @@ function softRefresh(){          // update outputs without rebuilding inputs (ke
 }
 function paint(R){
   renderKPIs(R);
+  renderSimple(R);
   renderSummary(R);
   renderDonut(R);
   renderCashflow(R);
@@ -766,6 +846,25 @@ $("cfView").querySelectorAll("button").forEach(b=>{
   b.onclick=()=>{CHARTVIEW=b.dataset.v;$("cfView").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderCashflow(calc());};
 });
 $("editPlans").onclick=()=>{EDIT=!EDIT;$("editPlans").classList.toggle("on",EDIT);$("editPlans").textContent=EDIT?"Done editing":"Edit plans";renderPlans();};
+$("modeSeg").querySelectorAll("button").forEach(b=>{
+  b.onclick=()=>{
+    MODE=b.dataset.m;
+    $("modeSeg").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
+    document.body.classList.toggle("simple",MODE==="simple");
+    if(MODE==="simple" && (CHARTVIEW==="breakdown"||CHARTVIEW==="compare")){
+      CHARTVIEW="cumulative";
+      $("cfView").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.v==="cumulative"));
+    }
+    if(EDIT){EDIT=false;$("editPlans").classList.remove("on");$("editPlans").textContent="Edit plans";}
+    render();
+  };
+});
+$("themeBtn").onclick=()=>{
+  THEME=THEME==="light"?"dark":"light";
+  document.documentElement.setAttribute("data-theme",THEME);
+  $("themeBtn").textContent=THEME==="light"?"◐ Dark":"◑ Light";
+};
+$("printBtn").onclick=()=>window.print();
 $("fx").oninput=()=>softRefresh();
 $("reset").onclick=()=>{S={...DEFAULTS};render();};
 
